@@ -73,8 +73,8 @@ function montaCampo(id, valor) {
 }
 
 function gerarPix(valor, txid) {
-  const chave = "+5516993330441";
-  const nome = "JOAO FELIPE";
+  const chave = "entregas@cenourao.com.br"; 
+  const nome = "CENOURAO VAREJAO";
   const cidade = "RIBEIRAO PRETO";
 
   const gui = "BR.GOV.BCB.PIX";
@@ -138,5 +138,6 @@ app.get("/api/pagamentos", basicAuth, (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+
 
 
