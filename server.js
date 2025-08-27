@@ -22,8 +22,8 @@ function salvarPagamentos() {
 }
 
 // --- Autenticação básica ---
-const AUTH_USER = "joao";
-const AUTH_PASS = "minhasenha"; // altere para uma senha forte
+const AUTH_USER = "mariana";
+const AUTH_PASS = "J784yrX2"; // altere para uma senha forte
 
 function basicAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -128,3 +128,4 @@ app.get("/api/pagamentos", basicAuth, (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+
