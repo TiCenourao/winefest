@@ -1,24 +1,34 @@
 import express from "express";
 import qrcode from "qrcode";
 import bodyParser from "body-parser";
+import fs from "fs";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
-app.use(express.static("public"));
+app.use(express.static("."));
 
-// Banco de dados simples em memória para txID
-let pagamentos = {}; // { txid: { total, confirmado: false } }
+// Carregar histórico de pagamentos
+let pagamentos = {};
+const ARQUIVO = "pagamentos.json";
 
-// Função CRC16 CCITT-FALSE
+if (fs.existsSync(ARQUIVO)) {
+  pagamentos = JSON.parse(fs.readFileSync(ARQUIVO));
+}
+
+// Função para salvar pagamentos
+function salvarPagamentos() {
+  fs.writeFileSync(ARQUIVO, JSON.stringify(pagamentos, null, 2));
+}
+
+// Funções Pix (crc16, montaCampo, gerarPix) — mesmas que você já tem
 function crc16(str) {
   let crc = 0xFFFF;
   for (let i = 0; i < str.length; i++) {
     crc ^= str.charCodeAt(i) << 8;
     for (let j = 0; j < 8; j++) {
-      if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
-      else crc <<= 1;
+      crc = (crc & 0x8000) !== 0 ? ((crc << 1) ^ 0x1021) : (crc << 1);
       crc &= 0xFFFF;
     }
   }
@@ -58,31 +68,33 @@ function gerarPix(valor, txid) {
   return payload;
 }
 
-// Rota para gerar QR
+// Rota para gerar QR Pix
 app.get("/api/pix", async (req, res) => {
   const quantidade = parseInt(req.query.qtd) || 1;
   const valorUnitario = 0.05;
   const total = quantidade * valorUnitario;
 
-  const txid = "ING" + Date.now().toString().slice(-10); // txid dinâmico
+  const txid = "ING" + Date.now().toString().slice(-10);
   const payload = gerarPix(total, txid);
 
   pagamentos[txid] = { total: total.toFixed(2), confirmado: false };
+  salvarPagamentos();
 
   const qr = await qrcode.toDataURL(payload);
   res.json({ qr, payload, total: total.toFixed(2), txid });
 });
 
-// Rota para marcar pagamento confirmado manualmente
+// Confirmar pagamento
 app.post("/api/confirmar", (req, res) => {
   const { txid } = req.body;
   if (!pagamentos[txid]) return res.status(404).json({ error: "TxID não encontrado" });
 
   pagamentos[txid].confirmado = true;
+  salvarPagamentos();
   res.json({ msg: "Pagamento confirmado", txid, info: pagamentos[txid] });
 });
 
-// Rota para listar pagamentos (para administração)
+// Listar pagamentos
 app.get("/api/pagamentos", (req, res) => {
   res.json(pagamentos);
 });
