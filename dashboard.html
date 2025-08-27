@@ -1,10 +1,153 @@
-import path from "path";
-import { fileURLToPath } from "url";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wine Fest 2025 - Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@700&display=swap');
 
-// rota do dashboard
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #4B1D3F, #8B3E5F);
+      color: #fff;
+      min-height: 100vh;
+    }
 
-app.get("/dashboard", basicAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "dashboard.html"));
-});
+    header {
+      text-align: center;
+      padding: 20px;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: #FFD700;
+      margin: 0;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      color: #333;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: #8B1E3F;
+      color: #fff;
+    }
+
+    tr.confirmado {
+      background-color: #D4EDDA; /* verde claro */
+    }
+
+    tr.pendente {
+      background-color: #F8D7DA; /* vermelho claro */
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    @media(max-width: 768px){
+      table, thead, tbody, th, td, tr { display: block; }
+      th { display: none; }
+      tr { margin-bottom: 15px; }
+      td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+      }
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        text-align: left;
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Wine Fest 2025 - Dashboard</h1>
+  </header>
+  <main>
+    <table id="pagamentosTable">
+      <thead>
+        <tr>
+          <th>TxID</th>
+          <th>Nome</th>
+          <th>CPF</th>
+          <th>Telefone</th>
+          <th>Quantidade</th>
+          <th>Total (R$)</th>
+          <th>Status</th>
+          <th>Gerado em</th>
+          <th>Confirmado em</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script>
+    async function carregarPagamentos() {
+      try {
+        const resp = await fetch("/api/pagamentos"); // autenticação via basicAuth do servidor
+        if(resp.status === 401) return alert("Usuário ou senha incorretos.");
+
+        const data = await resp.json();
+        const tbody = document.querySelector("#pagamentosTable tbody");
+        tbody.innerHTML = "";
+
+        Object.keys(data)
+          .sort((a,b) => new Date(data[b].geradoEm) - new Date(data[a].geradoEm))
+          .forEach(txid => {
+            const p = data[txid];
+            const tr = document.createElement("tr");
+            tr.className = p.confirmado ? "confirmado" : "pendente";
+
+            tr.innerHTML = `
+              <td data-label="TxID">${txid}</td>
+              <td data-label="Nome">${p.comprador.nome}</td>
+              <td data-label="CPF">${p.comprador.cpf}</td>
+              <td data-label="Telefone">${p.comprador.telefone}</td>
+              <td data-label="Quantidade">${p.quantidade}</td>
+              <td data-label="Total">${p.total}</td>
+              <td data-label="Status">${p.confirmado ? "Confirmado" : "Pendente"}</td>
+              <td data-label="Gerado em">${new Date(p.geradoEm).toLocaleString()}</td>
+              <td data-label="Confirmado em">${p.confirmadoEm ? new Date(p.confirmadoEm).toLocaleString() : "-"}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+      } catch(err) {
+        console.error(err);
+        alert("Erro ao carregar pagamentos.");
+      }
+    }
+
+    carregarPagamentos();
+    setInterval(carregarPagamentos, 30000); // atualiza a cada 30s
+  </script>
+</body>
+</html>
