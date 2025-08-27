@@ -104,7 +104,7 @@ function gerarPix(valor, txid) {
 app.get("/api/pix", async (req, res) => {
   const { qtd, nome, cpf, telefone } = req.query;
   const quantidade = parseInt(qtd) || 1;
-  const total = quantidade * 0.05;
+  const total = quantidade * 79.90;
 
   const txid = "ING" + Date.now().toString().slice(-10);
   const payload = gerarPix(total, txid);
@@ -138,6 +138,7 @@ app.get("/api/pagamentos", basicAuth, (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+
 
 
 
