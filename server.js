@@ -21,6 +21,29 @@ function salvarPagamentos() {
   fs.writeFileSync(ARQUIVO, JSON.stringify(pagamentos, null, 2));
 }
 
+// --- Autenticação básica ---
+const AUTH_USER = "joao";
+const AUTH_PASS = "minhasenha"; // altere para uma senha forte
+
+function basicAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Área restrita"');
+    return res.status(401).send("Autenticação necessária.");
+  }
+
+  const base64Credentials = authHeader.split(" ")[1];
+  const credentials = Buffer.from(base64Credentials, "base64").toString("ascii");
+  const [user, pass] = credentials.split(":");
+
+  if (user === AUTH_USER && pass === AUTH_PASS) {
+    next();
+  } else {
+    res.setHeader("WWW-Authenticate", 'Basic realm="Área restrita"');
+    return res.status(401).send("Usuário ou senha incorretos.");
+  }
+}
+
 // Funções Pix (crc16, montaCampo, gerarPix)
 function crc16(str) {
   let crc = 0xFFFF;
@@ -67,7 +90,7 @@ function gerarPix(valor, txid) {
   return payload;
 }
 
-// Rota para gerar QR Pix com dados do comprador
+// --- Rotas ---
 app.get("/api/pix", async (req, res) => {
   const { qtd, nome, cpf, telefone } = req.query;
   const quantidade = parseInt(qtd) || 1;
@@ -80,7 +103,8 @@ app.get("/api/pix", async (req, res) => {
     total: total.toFixed(2),
     confirmado: false,
     comprador: { nome, cpf, telefone },
-    quantidade
+    quantidade,
+    geradoEm: new Date().toISOString()
   };
   salvarPagamentos();
 
@@ -88,18 +112,18 @@ app.get("/api/pix", async (req, res) => {
   res.json({ qr, payload, total: total.toFixed(2), txid });
 });
 
-// Confirmar pagamento
 app.post("/api/confirmar", (req, res) => {
   const { txid } = req.body;
   if (!pagamentos[txid]) return res.status(404).json({ error: "TxID não encontrado" });
 
   pagamentos[txid].confirmado = true;
+  pagamentos[txid].confirmadoEm = new Date().toISOString();
   salvarPagamentos();
   res.json({ msg: "Pagamento confirmado", txid, info: pagamentos[txid] });
 });
 
-// Listar pagamentos
-app.get("/api/pagamentos", (req, res) => {
+// Dashboard protegido
+app.get("/api/pagamentos", basicAuth, (req, res) => {
   res.json(pagamentos);
 });
 
