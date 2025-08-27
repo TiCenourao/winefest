@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static("."));
 
-// Carregar histórico de pagamentos
+// Persistência de pagamentos
 let pagamentos = {};
 const ARQUIVO = "pagamentos.json";
 
@@ -17,12 +17,11 @@ if (fs.existsSync(ARQUIVO)) {
   pagamentos = JSON.parse(fs.readFileSync(ARQUIVO));
 }
 
-// Função para salvar pagamentos
 function salvarPagamentos() {
   fs.writeFileSync(ARQUIVO, JSON.stringify(pagamentos, null, 2));
 }
 
-// Funções Pix (crc16, montaCampo, gerarPix) — mesmas que você já tem
+// Funções Pix (crc16, montaCampo, gerarPix)
 function crc16(str) {
   let crc = 0xFFFF;
   for (let i = 0; i < str.length; i++) {
@@ -68,16 +67,21 @@ function gerarPix(valor, txid) {
   return payload;
 }
 
-// Rota para gerar QR Pix
+// Rota para gerar QR Pix com dados do comprador
 app.get("/api/pix", async (req, res) => {
-  const quantidade = parseInt(req.query.qtd) || 1;
-  const valorUnitario = 0.05;
-  const total = quantidade * valorUnitario;
+  const { qtd, nome, cpf, telefone } = req.query;
+  const quantidade = parseInt(qtd) || 1;
+  const total = quantidade * 0.05;
 
   const txid = "ING" + Date.now().toString().slice(-10);
   const payload = gerarPix(total, txid);
 
-  pagamentos[txid] = { total: total.toFixed(2), confirmado: false };
+  pagamentos[txid] = {
+    total: total.toFixed(2),
+    confirmado: false,
+    comprador: { nome, cpf, telefone },
+    quantidade
+  };
   salvarPagamentos();
 
   const qr = await qrcode.toDataURL(payload);
