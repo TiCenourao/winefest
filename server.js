@@ -2,9 +2,19 @@ import express from "express";
 import qrcode from "qrcode";
 import bodyParser from "body-parser";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Rota do dashboard protegido
+app.get("/dashboard", basicAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "dashboard.html"));
+});
 
 app.use(bodyParser.json());
 app.use(express.static("."));
@@ -128,4 +138,5 @@ app.get("/api/pagamentos", basicAuth, (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+
 
